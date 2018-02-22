@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#define N 2  /* # of thread */
+#define N 1  /* # of thread */
 
 int a[] = {10, 9, 8, 7, 6, 5, 4, 3, 2, 1};  /* target array */
 
@@ -19,6 +19,7 @@ void merge(int low, int high)
         int mid = (low+high)/2;
         int left = low;
         int right = mid+1;
+
         int b[high-low+1];
         int i, cur = 0;
 
@@ -38,10 +39,12 @@ void * mergesort(void *a)
 {
 		//must cast pointer before receiveing 
         ArrayIndex *pa = (ArrayIndex *)a;
+        
+		//base condition
+        if (pa->low >= pa->high) return;
+
         int mid = (pa->low + pa->high)/2;
 
-        //legal as N is globally defined
-        //create tracker and threads s
         ArrayIndex aIndex[N];
         pthread_t thread[N];
 
@@ -52,8 +55,9 @@ void * mergesort(void *a)
         aIndex[1].low = mid+1;
         aIndex[1].high = pa->high;
 
-        if (pa->low >= pa->high) return;
+        
 
+        //keep on creating threads until each thread has received 
         int i;
         for(i = 0; i < N; i++) pthread_create(&thread[i], NULL, mergesort, 
         	&aIndex[i]);
