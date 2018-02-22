@@ -4,7 +4,8 @@
 
 
 //to keep track of index of subarrays
-typedef struct tracker{
+typedef struct tracker
+{
 	int lower_index;
 	int higher_index;
 } tracker;
@@ -14,11 +15,46 @@ int count = 0;
 //the array of integers
 int *list;
 
+//sort and merge elements within given boundary 
+void *merge(int lower_index, int higher_index)
+{
+	//separate the subarray into two parts (as threads must merge two arrays)
+	int mid = (lower_index+higher_index)/2;
+	int left = lower_index;
+	int right = mid+1;
+	
+	//sub array to hold the values in this boundary to later update global list
+	int sub_array[higher_index - lower_index +1];
+	int current = 0;
+	while(left <= mid && right <=higher_index )
+	{
+		/*append smallest of elements from sublist passed by 
+				threads into sub_array*/
+		if (list[left] < list[right]){
+			sub_array[current++] = list[left++];
+		}else{
+			sub_array[current++] = list[right++];
+		}
+	}
+
+	//append any remaining elements in left part to sub array
+	while(left<=mid) sub_array[current++] = list[left++];
+	//append any remaining elements in right part to sub array
+	while(right<=higher_index) sub_array[current++] = list[right++];
+
+	/*replace the given boundaries in the global list with that of sorted
+		sub array*/
+
+	for (int i = 0; i < (higher_index - lower_index +1) ; i++) list[lower_index+i] = sub_array[i];
+	
+	return;
+}
+
 
 void *merge_sort(void *boundary){
 	tracker* sub_indices = (tracker*) boundary; 
 	//base case
-	if(sub_indices->lower_index >= sub_indices->higher_index) 
+	 if(sub_indices->lower_index >= sub_indices->higher_index) 
 		return;
 	int mid = (sub_indices->lower_index+sub_indices->higher_index)/2;
 	tracker sub_boundaries[2];
@@ -34,8 +70,13 @@ void *merge_sort(void *boundary){
 	  boundaries*/
 	pthread_create(&threads[0],NULL,merge_sort,&sub_boundaries[0]);
 	pthread_create(&threads[1],NULL,merge_sort,&sub_boundaries[1]);
-
-	pthread_join
+	
+	pthread_join(threads[0],NULL);
+	pthread_join(threads[1],NULL);	
+	
+	//resume execution from here when thread done 
+	merge(sub_indices->lower_index,sub_indices->higher_index);
+	pthread_exit(NULL);
 
 
 }
