@@ -1,20 +1,21 @@
 #include <stdio.h>
 #include <stdlib.h> 
 #include <pthread.h>
-
+#include <unistd.h>
 
 //to keep track of index of subarrays
 typedef struct tracker
 {
 	int lower_index;
 	int higher_index;
+	int initial_thread;
 } tracker;
 
 //keep track of elements in the array
 int count = 0;
 //the array of integers
 int *list;
-
+int thread_count = 0;
 //sort and merge elements within given boundary 
 void *merge(int lower_index, int higher_index)
 {
@@ -56,6 +57,16 @@ void *merge_sort(void *boundary){
 	//base case
 	 if(sub_indices->lower_index >= sub_indices->higher_index) 
 		return;
+	if (sub_indices->initial_thread==1|| sub_indices->initial_thread==2) {
+		//to synchronise printf
+		if(sub_indices->initial_thread==2) sleep(1);
+		printf("\n\nThe partition for thread %d is \n",sub_indices->initial_thread-1);
+		for (int i = sub_indices->lower_index; i < sub_indices->higher_index; ++i)
+		{
+			printf("%d  ",list[i]);
+		}
+	}
+
 	int mid = (sub_indices->lower_index+sub_indices->higher_index)/2;
 	tracker sub_boundaries[2];
 	//each thread spawns two childs
@@ -63,9 +74,11 @@ void *merge_sort(void *boundary){
 	//update the tracker for the threads
 	sub_boundaries[0].lower_index = sub_indices->lower_index;
 	sub_boundaries[0].higher_index = mid;
+	sub_boundaries[0].initial_thread=5;
 	sub_boundaries[1].lower_index = mid+1;
 	sub_boundaries[1].higher_index = sub_indices->higher_index;
-	
+	sub_boundaries[1].initial_thread=5;
+	thread_count++;
 	/*create two threads for each threads and call merge sort with the
 	  boundaries*/
 	pthread_create(&threads[0],NULL,merge_sort,&sub_boundaries[0]);
@@ -104,19 +117,32 @@ int main(int argc, char** argv)
     	fscanf(fp,"%d",&list[i]);
     	i++;
     }
+    printf("\nThe original list is: \n");
+    for (int i = 0; i < count; ++i)
+    {
+    	printf("%d  ",list[i]);
+    }
     //initialise indices 
-	tracker root_boundary;
-	root_boundary.lower_index = 0;
-	root_boundary.higher_index = count-1;
-	pthread_t thread;
-	//root thread creates child threads
-	pthread_create(&thread,NULL,merge_sort,&root_boundary);
-	pthread_join(thread,NULL);
+	tracker root_boundary[2];
+	root_boundary[0].lower_index = 0;
+	root_boundary[0].higher_index = count/2;
+	root_boundary[0].initial_thread=1;
+	root_boundary[1].lower_index = (count/2)+1;
+	root_boundary[1].higher_index = count-1;
+	root_boundary[1].initial_thread=2;
 
+	pthread_t thread[2];
+	//root thread creates child threads
+	pthread_create(&thread[0],NULL,merge_sort,&root_boundary[0]);
+	pthread_create(&thread[1],NULL,merge_sort,&root_boundary[1]);
+	pthread_join(thread[0],NULL);
+	pthread_join(thread[1],NULL);
+	merge(0,count-1);
 	//array is sorted at this point
+	printf("\n\nThe sorted array is: \n");
 	for (int i = 0; i < count; ++i)
 	{
-		printf("%d\n",list[i]);
+		printf("%d  ",list[i]);
 	}
     
     return 0;
